@@ -886,6 +886,8 @@ public class CommandLine {
          * @return whether this option should be excluded from the usage message
          */
         boolean hidden() default false;
+
+        boolean greedy() default true;
     }
     /**
      * <p>
@@ -1589,6 +1591,7 @@ public class CommandLine {
                 // The argument could not be interpreted as an option.
                 // We take this to mean that the remainder are positional arguments
                 else {
+                    // TODO Instead of consuming all remaining, only add the current one.
                     args.push(arg);
                     if (tracer.isDebug()) {tracer.debug("Could not find option '%s', deciding whether to treat as unmatched option or positional parameter...%n", arg);}
                     if (resemblesOption(arg)) { handleUnmatchedArguments(args.pop()); continue; } // #149
@@ -1959,6 +1962,14 @@ public class CommandLine {
             for (int i = 0; result.size() + originalSize < arity.min; i++) {
                 index = consumeOneArgument(field, arity, args, type, result, index, originalSize, argDescription);
             }
+
+            if (field.isAnnotationPresent(Option.class)) {
+                if (!field.getAnnotation(Option.class).greedy()) {
+                    consumeOneArgument(field, arity, args, type, result, index, originalSize, argDescription);
+                    return result;
+                }
+            }
+
             // now process the varargs if any
             while (result.size() < arity.max && !args.isEmpty()) {
                 if (annotation != Parameters.class) {
